@@ -1,11 +1,16 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const mongoose = require('mongoose');
 const User = require('../models/User');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_change_me';
 
 exports.signup = async (req, res) => {
   try {
+    // Nếu DB chưa kết nối, trả về 503 để client không phải chờ lâu
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(503).json({ message: 'Dịch vụ chưa sẵn sàng (DB chưa kết nối), vui lòng thử lại sau.' });
+    }
     const { name, email, password, confirmPassword } = req.body;
     if (!name || !email || !password) return res.status(400).json({ message: 'Thiếu thông tin (name, email hoặc password)' });
     if (confirmPassword && password !== confirmPassword) return res.status(400).json({ message: 'Mật khẩu xác nhận không khớp' });
@@ -19,7 +24,7 @@ exports.signup = async (req, res) => {
     await user.save();
 
     // không trả password (kể cả đã băm)
-    return res.status(201).json({ message: 'Tạo tài khoản thành công', user: { id: user._id, name: user.name, email: user.email, role: user.role } });
+  return res.status(201).json({ message: 'Tạo tài khoản thành công', user: { id: user._id, name: user.name, email: user.email, role: user.role, avatarUrl: user.avatarUrl || null } });
   } catch (err) {
     console.error('[auth.signup] error:', err);
     return res.status(500).json({ message: 'Lỗi máy chủ, vui lòng thử lại sau' });
@@ -28,6 +33,10 @@ exports.signup = async (req, res) => {
 
 exports.login = async (req, res) => {
   try {
+    // Nếu DB chưa kết nối, trả về 503 để client không phải chờ lâu
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(503).json({ message: 'Dịch vụ chưa sẵn sàng (DB chưa kết nối), vui lòng thử lại sau.' });
+    }
     const { email, password } = req.body;
     if (!email || !password) return res.status(400).json({ message: 'Thiếu thông tin (email hoặc mật khẩu)' });
     if (typeof email !== 'string' || typeof password !== 'string') {
@@ -69,8 +78,8 @@ exports.login = async (req, res) => {
 
   const role = user.role || 'user';
   const token = jwt.sign({ sub: user._id, email: user.email, role }, JWT_SECRET, { expiresIn: '1h' });
-  // trả về thông tin user (không có password) và token
-  return res.json({ token, user: { id: user._id, name: user.name, email: user.email, role } });
+  // trả về thông tin user (không có password) kèm avatarUrl và token
+  return res.json({ token, user: { id: user._id, name: user.name, email: user.email, role, avatarUrl: user.avatarUrl || null } });
   } catch (err) {
     console.error('[auth.login] error:', err);
     return res.status(500).json({ message: 'Lỗi máy chủ, vui lòng thử lại sau' });
