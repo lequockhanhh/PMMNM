@@ -1,11 +1,16 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const mongoose = require('mongoose');
 const User = require('../models/User');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_change_me';
 
 exports.signup = async (req, res) => {
   try {
+    // Nếu DB chưa kết nối, trả về 503 để client không phải chờ lâu
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(503).json({ message: 'Dịch vụ chưa sẵn sàng (DB chưa kết nối), vui lòng thử lại sau.' });
+    }
     const { name, email, password, confirmPassword } = req.body;
     if (!name || !email || !password) return res.status(400).json({ message: 'Thiếu thông tin (name, email hoặc password)' });
     if (confirmPassword && password !== confirmPassword) return res.status(400).json({ message: 'Mật khẩu xác nhận không khớp' });
@@ -28,6 +33,10 @@ exports.signup = async (req, res) => {
 
 exports.login = async (req, res) => {
   try {
+    // Nếu DB chưa kết nối, trả về 503 để client không phải chờ lâu
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(503).json({ message: 'Dịch vụ chưa sẵn sàng (DB chưa kết nối), vui lòng thử lại sau.' });
+    }
     const { email, password } = req.body;
     if (!email || !password) return res.status(400).json({ message: 'Thiếu thông tin (email hoặc mật khẩu)' });
     if (typeof email !== 'string' || typeof password !== 'string') {
