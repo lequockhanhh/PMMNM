@@ -31,12 +31,18 @@ import AddUser from "./AddUser";
 import Login from './Login';
 import SignUp from './SignUp';
 import Modal from './components/Modal';
+import Profile from './Profile';
+import ForgotPassword from './ForgotPassword';
+import ResetPassword from './ResetPassword';
 
 function App() {
   const [refreshFlag, setRefreshFlag] = useState(0);
   const [token, setToken] = useState(() => localStorage.getItem('token'));
   const [showLogin, setShowLogin] = useState(false);
   const [showSignUp, setShowSignUp] = useState(false);
+  const [showForgot, setShowForgot] = useState(false);
+  const [showReset, setShowReset] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const handleUserAdded = () => {
     setRefreshFlag(prev => prev + 1);
@@ -69,7 +75,7 @@ function App() {
 
   return (
     <div className="app-container">
-      <div className="main-card">
+      <div className={`main-card${currentUser?.role === 'admin' ? ' admin' : ''}`}>
         <h1 className="main-title">Quản lý người dùng</h1>
         {/* auth buttons centered in card when not logged in */}
         {!currentUser && (
@@ -78,7 +84,6 @@ function App() {
             <button className="btn small" onClick={() => { setShowSignUp(true); setShowLogin(false); }}>Đăng ký</button>
           </div>
         )}
-
         {/* If not logged in: show intro + prompt to login/signup */}
         {!currentUser ? (
           <div style={{padding:18, textAlign:'center'}}>
@@ -86,34 +91,52 @@ function App() {
           </div>
         ) : currentUser.role === 'admin' ? (
           <>
-            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
-              <div>
-                <strong>{currentUser.name}</strong> ({currentUser.email}) • <em>Admin</em>
-              </div>
-              <div>
-                <button className="btn" onClick={handleLogout}>Đăng xuất</button>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
+              <div style={{color:'#607d8b'}}> {currentUser.name} — <strong>Admin</strong></div>
+              <div style={{display:'flex',gap:8}}>
+                <AddUser onAdded={handleUserAdded} token={token} />
+                <button className="btn small" onClick={() => setShowLogoutConfirm(true)}>Đăng xuất</button>
               </div>
             </div>
-            <AddUser onAdded={handleUserAdded} />
             <UserList refreshFlag={refreshFlag} token={token} />
           </>
         ) : (
-          <div style={{padding:18}}>
-            <h3>Thông tin tài khoản</h3>
-            <div><strong>Tên:</strong> {currentUser.name}</div>
-            <div><strong>Email:</strong> {currentUser.email}</div>
-            <div style={{marginTop:12}}>
-              <button className="btn" onClick={handleLogout}>Đăng xuất</button>
+          <>
+            {/* Removed top user line for cleaner look */}
+            <Profile token={token} currentUser={currentUser} setCurrentUser={setCurrentUser} />
+            <div style={{marginTop:8, padding:18, paddingTop:0, display:'flex', justifyContent:'center'}}>
+              <button className="btn small" onClick={() => setShowLogoutConfirm(true)}>Đăng xuất</button>
             </div>
-          </div>
+          </>
         )}
 
         <Modal open={showLogin} title="Đăng nhập" onClose={() => setShowLogin(false)}>
-          <Login onLogin={handleLogin} />
+          <Login
+            onLogin={handleLogin}
+            onForgot={() => { setShowLogin(false); setShowForgot(true); }}
+            onReset={() => { setShowLogin(false); setShowReset(true); }}
+          />
         </Modal>
 
         <Modal open={showSignUp} title="Đăng ký" onClose={() => setShowSignUp(false)}>
           <SignUp onSignedUp={() => { setShowSignUp(false); setShowLogin(true); }} />
+        </Modal>
+
+        <Modal open={showForgot} title="Quên mật khẩu" onClose={() => setShowForgot(false)}>
+          <ForgotPassword />
+        </Modal>
+
+        <Modal open={showReset} title="Đổi mật khẩu bằng token" onClose={() => setShowReset(false)}>
+          <ResetPassword />
+        </Modal>
+
+        {/* Xác nhận đăng xuất */}
+        <Modal open={showLogoutConfirm} title="Xác nhận" onClose={() => setShowLogoutConfirm(false)}>
+          <div style={{marginBottom:12}}>Bạn có chắc chắn muốn đăng xuất?</div>
+          <div style={{display:'flex',gap:8,justifyContent:'flex-end'}}>
+            <button className="btn small" onClick={() => setShowLogoutConfirm(false)}>Hủy</button>
+            <button className="btn small danger" onClick={() => { setShowLogoutConfirm(false); handleLogout(); }}>Đăng xuất</button>
+          </div>
         </Modal>
       </div>
     </div>
